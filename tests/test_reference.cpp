@@ -3,18 +3,22 @@
 // tests/reference/gen_reference_cases.py and checked into the repo as JSON, so
 // these tests run in CI without any Python.
 //
-// Tier 1 (here): force kernel + potential energy at the initial configuration.
-// These are exact comparisons (no time integration involved).
-// Tier 2 (asymptotic momenta) is added once the RK45 integrator is ported.
+// Tier 1: force kernel + potential energy at the initial configuration. These
+// are exact comparisons (no time integration involved).
+// Tier 2: asymptotic momenta after integrating the explosion to convergence
+// with the adaptive RK45 (see the dedicated test below).
 
+#include <algorithm>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <cmath>
 #include <fstream>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_floating_point.hpp>
-#include <nlohmann/json.hpp>
-
+#include "coulomb/driver.hpp"
+#include "coulomb/integrator.hpp"
 #include "coulomb/molecule.hpp"
 #include "coulomb/system.hpp"
 
@@ -43,6 +47,8 @@ struct Case {
   State state;
   std::vector<Vec3> forces_init;
   Real potential_energy_init{};
+  std::vector<Vec3> momenta_final;
+  Real kinetic_energy_final{};
 };
 
 Case parse_case(const json& c) {
@@ -67,6 +73,8 @@ Case parse_case(const json& c) {
   }
   for (const auto& f : c.at("forces_init")) out.forces_init.push_back(to_vec3(f));
   out.potential_energy_init = c.at("potential_energy_init").get<Real>();
+  for (const auto& p : c.at("momenta_final")) out.momenta_final.push_back(to_vec3(p));
+  out.kinetic_energy_final = c.at("kinetic_energy_final").get<Real>();
   return out;
 }
 
@@ -90,6 +98,56 @@ TEST_CASE("force kernel matches the Python oracle", "[reference][force]") {
         REQUIRE_THAT(acc[i].x * m, WithinAbs(c.forces_init[i].x, 1e-9));
         REQUIRE_THAT(acc[i].y * m, WithinAbs(c.forces_init[i].y, 1e-9));
         REQUIRE_THAT(acc[i].z * m, WithinAbs(c.forces_init[i].z, 1e-9));
+      }
+    }
+  }
+}
+
+// Tier 2: asymptotic momenta. Integrate each case to the explosion's
+// large-time limit with the adaptive RK45 and compare the final per-atom
+// momenta against the Python oracle (scipy solve_ivp out to t = 1e10).
+//
+// Two engine-by-design differences from the oracle keep this from being an
+// exact match: (a) we terminate on a potential-energy threshold rather than a
+// hard-coded t = 1e10, and (b) the redistribution step pins the final kinetic
+// energy to E_0 exactly, whereas scipy's non-symplectic RK45 lets the energy
+// drift by ~rtol. At the threshold used here the residual is dominated by (b):
+// it floors near 2.4e-8 for two_protons, which is exactly scipy's measured
+// energy drift sqrt(KE_final/PE_0) - 1 -- i.e. our momenta are the more
+// energy-faithful ones and the gap is the oracle's own integration error. The
+// 1e-6 tolerance sits comfortably above that floor.
+TEST_CASE("asymptotic momenta match the Python oracle", "[reference][rk45]") {
+  const json doc = load_reference();
+  CoulombForce force(doc.at("coulomb_constant").get<Real>());
+
+  IntegratorOptions opts{doc.at("rk_rtol").get<Real>(), doc.at("rk_atol").get<Real>()};
+  RunConfig cfg;
+  cfg.pe_stop_fraction = 1e-10;
+  cfg.redistribute_energy = true;
+
+  for (const auto& jc : doc.at("cases")) {
+    Case c = parse_case(jc);
+    DYNAMIC_SECTION(c.name) {
+      auto integ = make_integrator(IntegratorKind::RK45, opts);
+      const RunResult run = run_to_convergence(c.molecule, force, *integ, c.state, cfg);
+      REQUIRE(run.converged);
+
+      // Largest momentum magnitude in the case sets the absolute scale for
+      // comparing the near-zero (symmetry) components.
+      Real scale = 0;
+      for (const auto& p : c.momenta_final) {
+        scale = std::max({scale, std::abs(p.x), std::abs(p.y), std::abs(p.z)});
+      }
+
+      REQUIRE(c.state.size() == c.momenta_final.size());
+      for (std::size_t i = 0; i < c.state.size(); ++i) {
+        const Real m = c.molecule.atoms[i].mass;
+        const Vec3 p{c.state.velocities[i].x * m, c.state.velocities[i].y * m,
+                     c.state.velocities[i].z * m};
+        const Vec3& ref = c.momenta_final[i];
+        REQUIRE_THAT(p.x, WithinRel(ref.x, 1e-6) || WithinAbs(ref.x, scale * 1e-6));
+        REQUIRE_THAT(p.y, WithinRel(ref.y, 1e-6) || WithinAbs(ref.y, scale * 1e-6));
+        REQUIRE_THAT(p.z, WithinRel(ref.z, 1e-6) || WithinAbs(ref.z, scale * 1e-6));
       }
     }
   }

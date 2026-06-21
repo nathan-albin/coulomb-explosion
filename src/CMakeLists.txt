@@ -2,7 +2,8 @@
 # the tests, and the benchmarks without rebuilding.
 add_library(coulomb_engine
   system.cpp
-  integrators.cpp)
+  integrators.cpp
+  driver.cpp)
 
 target_include_directories(coulomb_engine
   PUBLIC ${CMAKE_SOURCE_DIR}/include)

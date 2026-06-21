@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <iostream>
 
+#include "coulomb/driver.hpp"
 #include "coulomb/integrator.hpp"
 #include "coulomb/molecule.hpp"
 #include "coulomb/system.hpp"
@@ -45,27 +46,23 @@ Demo make_demo() {
 int main() {
   Demo demo = make_demo();
   CoulombForce force;
-  auto integrator = make_integrator(IntegratorKind::VelocityVerlet);
+  auto integrator = make_integrator(IntegratorKind::RK45);
 
-  const Real dt = Real{1e-3};
-  const int steps = 1000;
-
-  const Real e0 = force.potential_energy(demo.molecule, demo.state) +
-                  CoulombForce::kinetic_energy(demo.molecule, demo.state);
-
-  for (int s = 0; s < steps; ++s) {
-    integrator->step(demo.molecule, force, demo.state, dt);
-  }
-
-  const Real e1 = force.potential_energy(demo.molecule, demo.state) +
-                  CoulombForce::kinetic_energy(demo.molecule, demo.state);
+  // Drive the explosion to its asymptotic state: integrate adaptively until the
+  // potential energy has decayed away, then redistribute the residual into
+  // kinetic energy so the final KE matches the initial total energy exactly.
+  RunConfig config;
+  const RunResult run = run_to_convergence(demo.molecule, force, *integrator, demo.state, config);
 
   std::cout << "integrator : " << integrator->name() << '\n'
             << "atoms      : " << demo.molecule.size() << '\n'
-            << "steps      : " << steps << " (dt=" << dt << ")\n"
-            << "E_initial  : " << e0 << '\n'
-            << "E_final    : " << e1 << '\n'
-            << "drift      : " << (e1 - e0) << '\n';
+            << "steps      : " << run.steps << '\n'
+            << "t_final    : " << run.t_final << '\n'
+            << "E_initial  : " << run.energy_initial << '\n'
+            << "PE_final   : " << run.pe_final << '\n'
+            << "KE (pre)   : " << run.ke_before_redist << '\n'
+            << "KE (post)  : " << run.ke_after_redist << '\n'
+            << "redist s   : " << run.redistribution_scale << '\n';
 
   return EXIT_SUCCESS;
 }
