@@ -18,7 +18,8 @@ FetchContent_MakeAvailable(nlohmann_json)
 add_executable(coulomb_tests
   test_system.cpp
   test_integrator.cpp
-  test_reference.cpp)
+  test_reference.cpp
+  test_sampler.cpp)
 
 target_link_libraries(coulomb_tests
   PRIVATE coulomb::engine coulomb_flags

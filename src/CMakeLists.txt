@@ -3,7 +3,8 @@
 add_library(coulomb_engine
   system.cpp
   integrators.cpp
-  driver.cpp)
+  driver.cpp
+  sampler.cpp)
 
 target_include_directories(coulomb_engine
   PUBLIC ${CMAKE_SOURCE_DIR}/include)
