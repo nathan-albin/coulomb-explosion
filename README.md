@@ -1,12 +1,23 @@
-# Coulomb
+# Coulomb Explosion
 
 A C++ simulator for Coulomb explosions of small molecules (2–10 atoms), built to
 generate large training sets for neural networks that invert asymptotic momentum
 measurements back into initial molecular configurations.
 
-Performance is a first-class concern: the engine is built to be vectorized and
-cache-aware, with correctness and a scalar baseline established first, then
-measured, documented optimization.
+## The physics model
+
+The simulator begins from a hypothetical state in which the atoms within a molecule are at rest and have been instantaneously ionized, with the $i\text{th}$ atom receiving a charge of $q_i$. The simulator assumes a purely Coulombic potential energy surface, resulting in the following ODE system of point charges:
+$$
+m_i  \frac{d^2 \mathbf{r}_i}{dt^2}= \sum_{j\neq i}  \frac{q_i q_j}{|\mathbf{r}_i- \mathbf{r}_j |^3}(\mathbf{r}_i -\mathbf{r}_j).
+$$
+Here, $m_i$ is the mass of the $i\text{th}$ atom and $\mathbf{r}_i$ is its time-dependent position vector. The equations are written in atomic mass units so that the Coulomb constant is equal to 1.
+
+During the simulation, the ions will force each other apart, eventually settling into an asymptotic regime in which the time-dependent momentum vectors, $\mathbf{p}_i$ are very close to their limit $\lim\limits_{t\to\infty}\mathbf{p}_i(t)$.
+
+## Overall goal
+
+The overall goal is to make the simulation code high performance in order to perform millions of simulations efficiently. The engine is built to be vectorized and
+cache-aware, with correctness and a scalar baseline established first, then measured, documented optimization.
 
 > Status: **early scaffold.** The engine has a working symplectic integrator and
 > a naive O(N²) Coulomb kernel (the baseline). Samplers, an RK45 port, Parquet
