@@ -7,6 +7,17 @@
   variant has a fixed point to be compared against. No optimization is under
   test here — this is the floor.
 
+> **Scope (added 2026-06-21):** This characterizes the scalar kernel's per-pair
+> throughput swept to large N. The production workload is **N = 2–10 atoms ×
+> millions of independent sims**, where the optimization lever is
+> **SIMD-over-lanes (one simulation per lane)**, not SIMD-over-j. The large-N
+> rows here describe the kernel's asymptotic behavior, not the production hot
+> path; the directly relevant row is **N = 8**. The production baseline is 0002.
+> What carries forward from this report: the Google Benchmark harness and
+> methodology, the N = 8 data point, and per-pair scalar throughput as a sanity
+> floor — batched SIMD should approach ~width× this figure per lane, which is how
+> you confirm the lanes are actually filled.
+
 ## Method
 
 - Benchmark: `bench/bench_force.cpp` (`BM_CoulombForce`), Google Benchmark,
@@ -60,15 +71,21 @@ of 15 repetitions; `cv` is the coefficient of variation.
 - **Headroom is large and untapped.** The kernel is scalar `double` on a CPU
   with AVX2 (and AVX-512). The dominant cost is the per-pair `sqrt` +
   reciprocal; a SIMD variant over j with a vectorized rsqrt is the obvious first
-  lever.
+  lever *at large N*. At N = 2–10 — the production size — the inner-j vectors are
+  too short to pay off, and the real lever is batching independent sims across
+  lanes (SIMD-over-lanes; see 0002).
 
 ## Follow-ups
 
 - Add an `-march=native` (or explicit AVX2) build variant and re-measure as
   `0002-*` to separate "free" auto-vectorization from the algorithm.
-- Implement and benchmark a SIMD-over-j force kernel (Highway); compare against
-  this JSON with `tools/compare.py`.
+- **Production lever:** implement and benchmark a SIMD-over-lanes batch (one
+  simulation per lane, Highway) — the right axis for the N = 2–10 workload.
+  A SIMD-over-j force kernel only helps at large N, which this workload never
+  reaches; treat it as a secondary/large-N experiment, not the production path.
 - Extend the N sweep past 1024 to locate the actual L2→L3→DRAM cliffs.
+  **Not on the critical path** for this project — a generic HPC exercise at
+  sizes the production workload never runs.
 - Separate experiment (different shape — cost vs. accuracy, not throughput):
   sweep `pe_stop_fraction` in the explosion driver, emitting steps + asymptotic
   momentum error vs. the oracle. Warrants its own `bench_explosion` + CSV rather
