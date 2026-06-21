@@ -11,14 +11,15 @@
 
 - Benchmark: `bench/bench_force.cpp` (`BM_CoulombForce`), Google Benchmark,
   sweeping N = 8…1024 by ×2 over a random unit-charge system (fixed seed).
-- Build: `cmake --preset bench` → RelWithDebInfo, `-O2 -g -DNDEBUG`, GCC 13.3.0.
+- Build: `cmake --preset relwithdebinfo` → RelWithDebInfo, `-O2 -g -DNDEBUG`,
+  GCC 13.3.0.
   **No `-march`**, so this is the generic x86-64 ISA (SSE2) — no AVX2/AVX-512,
   no `-ffast-math`. That is deliberate: it is the conservative scalar floor the
   ISA-targeted variants must beat.
 - Command (idle machine, load 0.36, CPU scaling disabled):
 
   ```bash
-  ./build/bench/bench/coulomb_bench \
+  ./build/relwithdebinfo/bench/coulomb_bench \
     --benchmark_repetitions=15 --benchmark_report_aggregates_only=true \
     --benchmark_out=docs/benchmarks/0001-force-kernel-baseline.json \
     --benchmark_out_format=json

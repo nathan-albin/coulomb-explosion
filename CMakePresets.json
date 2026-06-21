@@ -35,8 +35,8 @@
       }
     },
     {
-      "name": "bench",
-      "displayName": "Release + benchmarks",
+      "name": "relwithdebinfo",
+      "displayName": "RelWithDebInfo + benchmarks",
       "inherits": "release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
@@ -47,7 +47,7 @@
   "buildPresets": [
     { "name": "debug",   "configurePreset": "debug" },
     { "name": "release", "configurePreset": "release" },
-    { "name": "bench",   "configurePreset": "bench" }
+    { "name": "relwithdebinfo", "configurePreset": "relwithdebinfo" }
   ],
   "testPresets": [
     {

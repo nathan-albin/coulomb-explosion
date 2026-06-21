@@ -35,12 +35,12 @@ ctest --preset release
 ./build/release/apps/coulomb        # run the demo driver
 ```
 
-Other presets: `debug` (warnings + ASan/UBSan), `bench` (builds the Google
-Benchmark microbenchmarks).
+Other presets: `debug` (warnings + ASan/UBSan), `relwithdebinfo` (builds the
+Google Benchmark microbenchmarks).
 
 ```sh
-cmake --preset bench && cmake --build --preset bench
-./build/bench/bench/coulomb_bench
+cmake --preset relwithdebinfo && cmake --build --preset relwithdebinfo
+./build/relwithdebinfo/bench/coulomb_bench
 ```
 
 ## Layout
