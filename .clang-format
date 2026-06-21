@@ -1,0 +1,7 @@
+# Based on Google C++ style with a wider column limit.
+BasedOnStyle: Google
+ColumnLimit: 100
+Standard: c++20
+DerivePointerAlignment: false
+PointerAlignment: Left
+IncludeBlocks: Regroup

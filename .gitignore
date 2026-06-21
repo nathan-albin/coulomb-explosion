@@ -1,0 +1,39 @@
+# Build directories
+/build/
+/out/
+/cmake-build-*/
+_deps/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+
+# Generated data / outputs
+/data/
+*.parquet
+*.arrow
+*.feather
+
+# Profiling artifacts
+perf.data*
+*.prof
+callgrind.out.*
+cachegrind.out.*
+flamegraph*.svg
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+compile_commands.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Private planning notes (not part of the public project)
+notes/

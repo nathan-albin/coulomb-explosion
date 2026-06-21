@@ -1,0 +1,22 @@
+data_dir: "/fastscratch/albin"
+sample_radius: 4.
+min_radius : 0.5
+n_samples: 10_000_000
+n_samples_per_batch: 100_000
+seed: 49188291
+atoms:
+  - symbol: Br
+    mass: 79
+    charge: 1
+  - symbol: Cl
+    mass: 35
+    charge: 1
+  - symbol: F
+    mass: 19
+    charge: 1
+  - symbol: C
+    mass: 12
+    charge: 1
+  - symbol: H
+    mass: 1
+    charge: 1
