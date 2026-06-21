@@ -7,8 +7,7 @@
 
 The project is a physics data generator with performance as a first-class goal:
 vectorized, cache-aware C++. It must build cleanly, run on at least two hardware
-platforms (a laptop CPU and an HPC node), and treat performance measurement as a
-built-in concern rather than an afterthought.
+platforms (a laptop CPU and an HPC node).
 
 ## Decision
 

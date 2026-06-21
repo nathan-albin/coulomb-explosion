@@ -46,8 +46,7 @@ cmake --preset bench && cmake --build --preset bench
 
 ## Design
 
-Algorithm choices (integrators, samplers) are pluggable strategies so
-alternatives are real, tested implementations rather than commented-out code.
+Algorithm choices (integrators, samplers) are pluggable strategies.
 Decisions and performance findings are written up in [docs/](docs/). The Python
 reference in [python/](python/) is the correctness ground truth.
 
