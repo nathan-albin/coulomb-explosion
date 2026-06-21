@@ -21,15 +21,23 @@ struct Vec3 {
   constexpr Vec3 operator-(const Vec3& o) const { return {x - o.x, y - o.y, z - o.z}; }
   constexpr Vec3 operator*(Real s) const { return {x * s, y * s, z * s}; }
 
-  constexpr Vec3& operator+=(const Vec3& o) { x += o.x; y += o.y; z += o.z; return *this; }
-  constexpr Vec3& operator-=(const Vec3& o) { x -= o.x; y -= o.y; z -= o.z; return *this; }
+  constexpr Vec3& operator+=(const Vec3& o) {
+    x += o.x;
+    y += o.y;
+    z += o.z;
+    return *this;
+  }
+  constexpr Vec3& operator-=(const Vec3& o) {
+    x -= o.x;
+    y -= o.y;
+    z -= o.z;
+    return *this;
+  }
 };
 
 constexpr Vec3 operator*(Real s, const Vec3& v) { return v * s; }
 
-constexpr Real dot(const Vec3& a, const Vec3& b) {
-  return a.x * b.x + a.y * b.y + a.z * b.z;
-}
+constexpr Real dot(const Vec3& a, const Vec3& b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 
 inline Real norm(const Vec3& v) { return std::sqrt(dot(v, v)); }
 

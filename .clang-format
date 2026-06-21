@@ -1,4 +1,9 @@
 # Based on Google C++ style with a wider column limit.
+#
+# Pinned tool version: clang-format 18.1.8 (CI installs this exact version; see
+# .github/workflows/ci.yml). clang-format's output changes between major
+# versions, so format locally with the same one:
+#   pipx install clang-format==18.1.8   # or: pip install clang-format==18.1.8
 BasedOnStyle: Google
 ColumnLimit: 100
 Standard: c++20

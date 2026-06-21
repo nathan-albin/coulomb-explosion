@@ -11,8 +11,6 @@ namespace coulomb::units {
 inline constexpr Real kAmuToElectronMass = 1822.888486209;
 
 /// Convert a mass in amu (daltons) to electron masses (simulation units).
-constexpr Real amu_to_electron_mass(Real mass_amu) {
-  return mass_amu * kAmuToElectronMass;
-}
+constexpr Real amu_to_electron_mass(Real mass_amu) { return mass_amu * kAmuToElectronMass; }
 
 }  // namespace coulomb::units

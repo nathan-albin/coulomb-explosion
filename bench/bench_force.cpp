@@ -45,8 +45,7 @@ void BM_CoulombForce(benchmark::State& bench) {
     benchmark::ClobberMemory();
   }
   // Report pairwise interactions/sec to normalize across N.
-  bench.SetItemsProcessed(bench.iterations() *
-                          static_cast<int64_t>(n) * static_cast<int64_t>(n));
+  bench.SetItemsProcessed(bench.iterations() * static_cast<int64_t>(n) * static_cast<int64_t>(n));
 }
 
 }  // namespace

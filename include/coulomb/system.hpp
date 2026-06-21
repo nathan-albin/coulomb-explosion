@@ -29,8 +29,7 @@ class CoulombForce {
   explicit CoulombForce(Real coulomb_constant = Real{1}) : k_(coulomb_constant) {}
 
   /// Accumulate forces on each atom into `forces` (resized to N, zeroed first).
-  void accelerations(const Molecule& molecule, const State& state,
-                     std::vector<Vec3>& forces) const;
+  void accelerations(const Molecule& molecule, const State& state, std::vector<Vec3>& forces) const;
 
   /// Total potential energy of the configuration. Useful as a conserved-ish
   /// quantity for validating integrators.

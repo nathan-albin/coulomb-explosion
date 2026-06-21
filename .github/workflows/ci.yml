@@ -52,7 +52,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Pin the exact clang-format version. The runner's bundled clang-format
+      # drifts with the image, and clang-format's output changes between major
+      # versions, so an unpinned binary makes this job non-deterministic.
+      # Keep this version in sync with the note in .clang-format.
+      - name: Install clang-format
+        run: pipx install clang-format==18.1.8
+
       - name: Check formatting
         run: |
-          find src apps tests bench include -name '*.cpp' -o -name '*.hpp' \
-            | xargs clang-format --dry-run --Werror
+          find src apps tests bench include \( -name '*.cpp' -o -name '*.hpp' \) -print0 \
+            | xargs -0 clang-format --dry-run --Werror
