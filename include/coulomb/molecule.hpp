@@ -1,9 +1,11 @@
 #pragma once
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "coulomb/types.hpp"
+#include "coulomb/units.hpp"
 
 namespace coulomb {
 
@@ -14,6 +16,13 @@ struct Atom {
   Real mass{0};        ///< Atomic mass (simulation units).
   Real charge{0};      ///< Net charge after ionization (simulation units).
 };
+
+/// Build an atom from human-facing units: mass in amu (daltons), converted to
+/// the electron-mass simulation units the dynamics expect. This is the
+/// boundary where external mass input enters the engine.
+inline Atom atom_from_amu(std::string symbol, Real mass_amu, Real charge) {
+  return Atom{std::move(symbol), units::amu_to_electron_mass(mass_amu), charge};
+}
 
 /// The molecular definition: which atoms are present and their properties.
 /// Equilibrium geometry is supplied separately by a sampler so the same

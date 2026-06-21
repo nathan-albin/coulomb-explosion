@@ -125,7 +125,7 @@ def main() -> None:
         "description": (
             "Reference cases generated from python/reference/coulomb.py. "
             "Atomic units (Coulomb constant = 1). Masses are in electron-mass "
-            "units (amu * 1822.89). Do not edit by hand; regenerate with "
+            "units (amu * 1822.888486209). Do not edit by hand; regenerate with "
             "tests/reference/gen_reference_cases.py."
         ),
         "coulomb_constant": 1.0,

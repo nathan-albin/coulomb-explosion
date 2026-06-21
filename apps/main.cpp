@@ -25,10 +25,11 @@ struct Demo {
 
 Demo make_demo() {
   Demo d;
+  // Masses supplied in amu; atom_from_amu converts to electron masses.
   d.molecule.atoms = {
-      {"H", Real{1.0}, Real{1.0}},
-      {"H", Real{1.0}, Real{1.0}},
-      {"H", Real{1.0}, Real{1.0}},
+      atom_from_amu("H", Real{1.0}, Real{1.0}),
+      atom_from_amu("H", Real{1.0}, Real{1.0}),
+      atom_from_amu("H", Real{1.0}, Real{1.0}),
   };
   d.state.positions = {
       {Real{0.0}, Real{0.0}, Real{0.0}},

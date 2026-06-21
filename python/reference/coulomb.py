@@ -13,8 +13,12 @@ RKATOL = 1e-16
 def convert_masses(masses):
     """
     Convert masses from amu to electron mass.
+
+    The factor is m_u / m_e, CODATA 2018 "atomic mass unit-electron mass
+    relationship". Kept in sync with units::kAmuToElectronMass in the C++ engine
+    (include/coulomb/units.hpp) so both implementations agree to full precision.
     """
-    return masses*1822.89
+    return masses*1822.888486209
 
 @numba.jit
 def forces(x, charges):
