@@ -42,12 +42,21 @@
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "COULOMB_BUILD_BENCHMARKS": "ON"
       }
+    },
+    {
+      "name": "relwithdebinfo-f32",
+      "displayName": "RelWithDebInfo + benchmarks, single precision (Real=float)",
+      "inherits": "relwithdebinfo",
+      "cacheVariables": {
+        "COULOMB_SINGLE_PRECISION": "ON"
+      }
     }
   ],
   "buildPresets": [
     { "name": "debug",   "configurePreset": "debug" },
     { "name": "release", "configurePreset": "release" },
-    { "name": "relwithdebinfo", "configurePreset": "relwithdebinfo" }
+    { "name": "relwithdebinfo", "configurePreset": "relwithdebinfo" },
+    { "name": "relwithdebinfo-f32", "configurePreset": "relwithdebinfo-f32" }
   ],
   "testPresets": [
     {

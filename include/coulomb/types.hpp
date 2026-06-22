@@ -7,8 +7,17 @@ namespace coulomb {
 
 /// Floating-point precision used throughout the simulation.
 /// Kept as a single alias so we can experiment with float vs double and
-/// measure the accuracy/throughput trade-off from one place.
+/// measure the accuracy/throughput trade-off from one place. Define
+/// `COULOMB_SINGLE_PRECISION` (the `*-f32` CMake presets) to build the whole
+/// engine in `float` — used by the precision-robustness sweep to diff f32
+/// trajectories against the f64 reference. Default stays `double`: f64 remains
+/// the ground truth and the production fallback, so this is a build-time switch,
+/// not a commitment to single precision.
+#ifdef COULOMB_SINGLE_PRECISION
+using Real = float;
+#else
 using Real = double;
+#endif
 
 /// Minimal 3-vector. Intentionally a plain aggregate so it stays trivially
 /// copyable and the layout is obvious for later SIMD / SoA work.

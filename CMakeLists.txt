@@ -29,10 +29,20 @@ option(COULOMB_BUILD_TESTS      "Build unit / correctness tests"  ON)
 option(COULOMB_BUILD_BENCHMARKS "Build microbenchmarks"           OFF)
 option(COULOMB_ENABLE_WARNINGS  "Enable a strict warning set"     ON)
 option(COULOMB_ENABLE_SANITIZERS "Build with ASan + UBSan"        OFF)
+option(COULOMB_SINGLE_PRECISION "Build the engine in float (Real=float)" OFF)
 
 # Interface target carrying our compile flags, linked by everything we build.
 add_library(coulomb_flags INTERFACE)
 target_compile_features(coulomb_flags INTERFACE cxx_std_20)
+
+# Precision switch. Applied on the interface target the engine, tests, and
+# benchmarks all link, so a given build directory is internally consistent
+# (every TU sees the same Real — no ODR split). Configure a separate build dir
+# with the `*-f32` preset to get the single-precision binaries alongside the
+# default double-precision tree.
+if(COULOMB_SINGLE_PRECISION)
+  target_compile_definitions(coulomb_flags INTERFACE COULOMB_SINGLE_PRECISION)
+endif()
 
 if(COULOMB_ENABLE_WARNINGS)
   if(MSVC)

@@ -45,3 +45,11 @@ add_executable(coulomb_explosion bench_explosion.cpp)
 
 target_link_libraries(coulomb_explosion
   PRIVATE coulomb::engine coulomb_flags)
+
+# Precision-robustness sweep: f32 vs f64 asymptotic-momentum drift and failure
+# rate across molecule sizes. Precision-agnostic (uses the build's Real); build
+# under both relwithdebinfo and relwithdebinfo-f32 and diff the two CSVs.
+add_executable(coulomb_precision_sweep bench_precision_sweep.cpp)
+
+target_link_libraries(coulomb_precision_sweep
+  PRIVATE coulomb::engine coulomb_flags)
