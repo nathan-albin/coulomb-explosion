@@ -14,6 +14,7 @@ CMakeUserPresets.json
 *.parquet
 *.arrow
 *.feather
+bench_explosion_per_sim.csv
 
 # Profiling artifacts
 perf.data*

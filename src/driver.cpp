@@ -5,7 +5,8 @@
 namespace coulomb {
 
 RunResult run_to_convergence(const Molecule& molecule, const CoulombForce& force,
-                             Integrator& integrator, State& state, const RunConfig& config) {
+                             Integrator& integrator, State& state, const RunConfig& config,
+                             const StepObserver& observer) {
   RunResult result;
 
   const Real pe0 = force.potential_energy(molecule, state);
@@ -20,7 +21,9 @@ RunResult run_to_convergence(const Molecule& molecule, const CoulombForce& force
       result.converged = false;
       break;
     }
-    result.t_final += integrator.step(molecule, force, state, config.max_dt);
+    const Real dt = integrator.step(molecule, force, state, config.max_dt);
+    if (observer) observer(result.steps, result.t_final, dt);
+    result.t_final += dt;
     ++result.steps;
     pe = force.potential_energy(molecule, state);
     result.converged = true;

@@ -1,12 +1,21 @@
 #pragma once
 
 #include <cstddef>
+#include <functional>
 
 #include "coulomb/integrator.hpp"
 #include "coulomb/molecule.hpp"
 #include "coulomb/system.hpp"
 
 namespace coulomb {
+
+/// Optional per-step instrumentation hook. Invoked once after each accepted
+/// step with: the 0-based step index, the simulated time at the START of the
+/// step (`t_start`), and the step size `dt` actually taken (so the step spans
+/// `[t_start, t_start + dt)`). Empty by default — the production path passes
+/// nothing and pays only a branch on an empty std::function. Used by the
+/// explosion harness to capture step-size-vs-time traces.
+using StepObserver = std::function<void(std::size_t step_index, Real t_start, Real dt)>;
 
 /// How to drive a Coulomb explosion to its asymptotic (t -> infinity) state.
 ///
@@ -58,6 +67,7 @@ struct RunResult {
 /// redistribute residual potential energy into kinetic energy. The integrator's
 /// adaptive tolerances are configured at its construction (IntegratorOptions).
 RunResult run_to_convergence(const Molecule& molecule, const CoulombForce& force,
-                             Integrator& integrator, State& state, const RunConfig& config);
+                             Integrator& integrator, State& state, const RunConfig& config,
+                             const StepObserver& observer = {});
 
 }  // namespace coulomb
