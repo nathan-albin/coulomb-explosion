@@ -79,9 +79,9 @@ Real min_pair_distance(const State& s) {
 // f32 can fail where f64 sails through; the analysis needs to bin these.
 enum FailureCode : int {
   kOk = 0,
-  kException = 1,    // integrator threw (e.g. step rejected too many times).
-  kNotConverged = 2, // hit max_steps without meeting the PE-stop criterion.
-  kNonFinite = 3,    // NaN/Inf in the final momenta.
+  kException = 1,     // integrator threw (e.g. step rejected too many times).
+  kNotConverged = 2,  // hit max_steps without meeting the PE-stop criterion.
+  kNonFinite = 3,     // NaN/Inf in the final momenta.
 };
 
 // ---------------------------------------------------------------------------
@@ -90,8 +90,7 @@ enum FailureCode : int {
 // the correct start of the f32 pipeline).
 // ---------------------------------------------------------------------------
 
-void dump_geometries(const std::string& path, std::size_t n,
-                     const std::vector<State>& states) {
+void dump_geometries(const std::string& path, std::size_t n, const std::vector<State>& states) {
   std::ofstream out(path);
   out << "atoms " << n << " sims " << states.size() << '\n';
   out.precision(17);
@@ -144,8 +143,8 @@ struct Args {
   Real rtol = static_cast<Real>(1e-8);
   Real atol = static_cast<Real>(1e-16);
   Real pe_stop = static_cast<Real>(1e-9);
-  std::string geometries;        // load from here if set.
-  std::string dump_geometries;   // dump sampled geometries here if set.
+  std::string geometries;       // load from here if set.
+  std::string dump_geometries;  // dump sampled geometries here if set.
   std::string csv = "prec_sweep.csv";
 };
 
