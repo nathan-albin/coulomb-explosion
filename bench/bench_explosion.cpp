@@ -189,6 +189,7 @@ struct Args {
   std::size_t sims = 4000;
   std::uint64_t seed = 0xC0FFEE;
   std::string csv = "bench_explosion_per_sim.csv";
+  std::string eff_csv = "bench_explosion_efficiency.csv";
   std::vector<std::size_t> lanes = {4, 8, 16};
 };
 
@@ -215,6 +216,8 @@ Args parse_args(int argc, char** argv) {
       a.seed = static_cast<std::uint64_t>(std::stoull(argv[++i]));
     } else if (flag == "--csv" && has_val) {
       a.csv = argv[++i];
+    } else if (flag == "--eff-csv" && has_val) {
+      a.eff_csv = argv[++i];
     } else if (flag == "--lanes" && has_val) {
       a.lanes = parse_lanes(argv[++i]);
     } else {
@@ -301,6 +304,8 @@ int main(int argc, char** argv) {
   constexpr std::size_t kBatches = 4000;
   std::uniform_int_distribution<std::size_t> idist(0, records.size() - 1);
 
+  // (K, eff stats) for each lane width, collected for stdout and the CSV.
+  std::vector<std::pair<std::size_t, Stats>> eff_by_k;
   for (std::size_t k : args.lanes) {
     if (k == 0 || k > records.size()) continue;
     std::vector<double> effs;
@@ -323,11 +328,23 @@ int main(int argc, char** argv) {
       effs.push_back(speedup / static_cast<double>(k));
     }
     const Stats es = summarize(effs);
+    eff_by_k.emplace_back(k, es);
     std::cout << "  K=" << k << "  eff mean " << es.mean << "  sd " << es.sd << "  p50 " << es.p50
               << "  p90 " << es.p90 << "   lanes recovered ~ "
               << (1.0 - es.mean) * static_cast<double>(k) << "\n";
   }
 
-  std::cout << "\nper-sim data written to " << args.csv << "\n";
+  // --- Efficiency CSV (for the report plot) --------------------------------
+  {
+    std::ofstream out(args.eff_csv);
+    out << "lanes,eff_mean,eff_sd,eff_p50,eff_p90,lanes_recovered\n";
+    for (const auto& [k, es] : eff_by_k) {
+      out << k << ',' << es.mean << ',' << es.sd << ',' << es.p50 << ',' << es.p90 << ','
+          << (1.0 - es.mean) * static_cast<double>(k) << '\n';
+    }
+  }
+
+  std::cout << "\nper-sim data written to " << args.csv << "\n"
+            << "efficiency data written to " << args.eff_csv << "\n";
   return EXIT_SUCCESS;
 }
