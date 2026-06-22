@@ -73,8 +73,7 @@ Batch make_batch(std::size_t n, std::size_t k, Real coulomb_k = 1.0) {
 
   b.pair_const.assign(n * n, 0.0);
   for (std::size_t i = 0; i < n; ++i)
-    for (std::size_t j = 0; j < n; ++j)
-      b.pair_const[i * n + j] = coulomb_k * charge[i] * charge[j];
+    for (std::size_t j = 0; j < n; ++j) b.pair_const[i * n + j] = coulomb_k * charge[i] * charge[j];
 
   b.inv_mass.assign(n, 0.0);
   for (std::size_t i = 0; i < n; ++i) b.inv_mass[i] = 1.0 / mass[i];
@@ -201,8 +200,7 @@ std::pair<Molecule, State> lane_system(const Batch& b, std::size_t lane) {
   state.positions.reserve(b.n);
   for (std::size_t i = 0; i < b.n; ++i) {
     mol.atoms.push_back({"X", 1.0, 1.0});
-    state.positions.push_back(
-        {b.px[i * b.k + lane], b.py[i * b.k + lane], b.pz[i * b.k + lane]});
+    state.positions.push_back({b.px[i * b.k + lane], b.py[i * b.k + lane], b.pz[i * b.k + lane]});
   }
   state.velocities.assign(b.n, Vec3{});
   return {std::move(mol), std::move(state)};
@@ -233,8 +231,8 @@ void BM_ForceScalarBatch(benchmark::State& bench) {
     }
     benchmark::ClobberMemory();
   }
-  bench.SetItemsProcessed(bench.iterations() * static_cast<int64_t>(k) *
-                          static_cast<int64_t>(n) * static_cast<int64_t>(n));
+  bench.SetItemsProcessed(bench.iterations() * static_cast<int64_t>(k) * static_cast<int64_t>(n) *
+                          static_cast<int64_t>(n));
   bench.counters["lanes"] = static_cast<double>(k);
 }
 
@@ -251,8 +249,8 @@ void BM_ForceBatched(benchmark::State& bench) {
   }
   // K*N*N items per iteration, matching BM_ForceScalarBatch so the
   // per-N throughput rows are directly comparable.
-  bench.SetItemsProcessed(bench.iterations() * static_cast<int64_t>(k) *
-                          static_cast<int64_t>(n) * static_cast<int64_t>(n));
+  bench.SetItemsProcessed(bench.iterations() * static_cast<int64_t>(k) * static_cast<int64_t>(n) *
+                          static_cast<int64_t>(n));
   bench.counters["lanes"] = static_cast<double>(k);
 }
 
@@ -269,8 +267,8 @@ void BM_ForceBatchedNoDivSqrt(benchmark::State& bench) {
     benchmark::DoNotOptimize(b.ax.get());
     benchmark::ClobberMemory();
   }
-  bench.SetItemsProcessed(bench.iterations() * static_cast<int64_t>(k) *
-                          static_cast<int64_t>(n) * static_cast<int64_t>(n));
+  bench.SetItemsProcessed(bench.iterations() * static_cast<int64_t>(k) * static_cast<int64_t>(n) *
+                          static_cast<int64_t>(n));
   bench.counters["lanes"] = static_cast<double>(k);
 }
 
