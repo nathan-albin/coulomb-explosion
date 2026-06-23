@@ -11,6 +11,14 @@
 // the answer to 0001's check: "batched SIMD should approach ~width x the scalar
 // per-pair throughput per lane" — i.e. confirm the lanes actually fill.
 //
+// The batched kernel is templated on element type T (see docs/benchmarks/0005):
+// it is self-contained Highway code, independent of the engine's compile-time
+// Real, so f32 (K=16) and f64 (K=8) kernels coexist in one binary. The headline
+// 0005 metric is f32-batched / f64-batched items/sec — how much of the doubled
+// lane count survives the divide/sqrt port cap measured in 0003. The scalar
+// baseline stays f64 (the engine's scalar kernel uses compile-time Real; an f32
+// scalar would need the f32 build and is not worth it here).
+//
 // Run with: ./build/relwithdebinfo/bench/coulomb_force_batch
 //
 // Layout: one SIMD lane per simulation. Positions are SoA over lanes — for each
@@ -23,7 +31,11 @@
 #include <hwy/aligned_allocator.h>
 #include <hwy/highway.h>
 
+#include <algorithm>
+#include <cmath>
 #include <cstddef>
+#include <cstdio>
+#include <cstdlib>
 #include <random>
 #include <vector>
 
@@ -35,59 +47,67 @@ using namespace coulomb;
 
 namespace {
 
-// A batch of K simulations of an N-atom molecule, SoA over lanes.
+// A batch of K simulations of an N-atom molecule, SoA over lanes. Templated on
+// element type T so the f32 and f64 batched kernels share one definition.
+template <class T>
 struct Batch {
   std::size_t n{0};
   std::size_t k{0};  // SIMD lanes = sims in the batch.
   // Per-coordinate position buffers, length n*k, lane-strided.
-  hwy::AlignedFreeUniquePtr<double[]> px, py, pz;
-  hwy::AlignedFreeUniquePtr<double[]> ax, ay, az;  // acceleration output.
-  std::vector<double> pair_const;                  // k*q_i*q_j per (i,j), length n*n.
-  std::vector<double> inv_mass;                    // 1/m_i, length n.
+  hwy::AlignedFreeUniquePtr<T[]> px, py, pz;
+  hwy::AlignedFreeUniquePtr<T[]> ax, ay, az;  // acceleration output.
+  std::vector<T> pair_const;                  // k*q_i*q_j per (i,j), length n*n.
+  std::vector<T> inv_mass;                    // 1/m_i, length n.
 };
 
 // Same molecule across the batch (unit charge/mass, matching bench_force.cpp);
 // each lane gets an independent random geometry from the same distribution.
-Batch make_batch(std::size_t n, std::size_t k, Real coulomb_k = 1.0) {
+// Geometry is drawn in double and narrowed to T on store, so the f32 and f64
+// batches built with matching lane counts start from the same geometry up to
+// f32 rounding.
+template <class T>
+Batch<T> make_batch(std::size_t n, std::size_t k, double coulomb_k = 1.0) {
   std::mt19937 rng(12345);
   std::uniform_real_distribution<double> pos(-1.0, 1.0);
 
-  Batch b;
+  Batch<T> b;
   b.n = n;
   b.k = k;
-  b.px = hwy::AllocateAligned<double>(n * k);
-  b.py = hwy::AllocateAligned<double>(n * k);
-  b.pz = hwy::AllocateAligned<double>(n * k);
-  b.ax = hwy::AllocateAligned<double>(n * k);
-  b.ay = hwy::AllocateAligned<double>(n * k);
-  b.az = hwy::AllocateAligned<double>(n * k);
+  b.px = hwy::AllocateAligned<T>(n * k);
+  b.py = hwy::AllocateAligned<T>(n * k);
+  b.pz = hwy::AllocateAligned<T>(n * k);
+  b.ax = hwy::AllocateAligned<T>(n * k);
+  b.ay = hwy::AllocateAligned<T>(n * k);
+  b.az = hwy::AllocateAligned<T>(n * k);
 
   std::vector<double> charge(n, 1.0), mass(n, 1.0);
   for (std::size_t i = 0; i < n; ++i) {
     for (std::size_t lane = 0; lane < k; ++lane) {
-      b.px[i * k + lane] = pos(rng);
-      b.py[i * k + lane] = pos(rng);
-      b.pz[i * k + lane] = pos(rng);
+      b.px[i * k + lane] = static_cast<T>(pos(rng));
+      b.py[i * k + lane] = static_cast<T>(pos(rng));
+      b.pz[i * k + lane] = static_cast<T>(pos(rng));
     }
   }
 
-  b.pair_const.assign(n * n, 0.0);
+  b.pair_const.assign(n * n, T(0));
   for (std::size_t i = 0; i < n; ++i)
-    for (std::size_t j = 0; j < n; ++j) b.pair_const[i * n + j] = coulomb_k * charge[i] * charge[j];
+    for (std::size_t j = 0; j < n; ++j)
+      b.pair_const[i * n + j] = static_cast<T>(coulomb_k * charge[i] * charge[j]);
 
-  b.inv_mass.assign(n, 0.0);
-  for (std::size_t i = 0; i < n; ++i) b.inv_mass[i] = 1.0 / mass[i];
+  b.inv_mass.assign(n, T(0));
+  for (std::size_t i = 0; i < n; ++i) b.inv_mass[i] = static_cast<T>(1.0 / mass[i]);
   return b;
 }
 
 // Batched kernel: compute K acceleration fields at once, mirroring the scalar
 // CoulombForce::accelerations math lane-for-lane (1/sqrt, not rsqrt, so the
 // numerics match the scalar baseline rather than trading accuracy for speed).
-void accelerations_batched(const Batch& b) {
-  const hn::ScalableTag<double> d;
+template <class T>
+void accelerations_batched(const Batch<T>& b) {
+  const hn::ScalableTag<T> d;
   const std::size_t n = b.n;
   const std::size_t k = b.k;
-  const auto one = hn::Set(d, 1.0);
+  const auto one = hn::Set(d, T(1));
 
   for (std::size_t i = 0; i < n; ++i) {
     hn::Store(hn::Zero(d), d, &b.ax[i * k]);
@@ -144,8 +164,9 @@ void accelerations_batched(const Batch& b) {
 // two multiplies. The gap between this and accelerations_batched isolates how
 // much of the batched kernel's time is spent on the divide/sqrt execution port
 // — the quantity that says whether an rsqrt reformulation is worth pursuing.
-void accelerations_batched_multonly(const Batch& b) {
-  const hn::ScalableTag<double> d;
+template <class T>
+void accelerations_batched_multonly(const Batch<T>& b) {
+  const hn::ScalableTag<T> d;
   const std::size_t n = b.n;
   const std::size_t k = b.k;
 
@@ -192,8 +213,9 @@ void accelerations_batched_multonly(const Batch& b) {
 }
 
 // Reconstruct an AoS scalar system for one lane so the scalar baseline does the
-// exact same total work (K sims) as one batched call.
-std::pair<Molecule, State> lane_system(const Batch& b, std::size_t lane) {
+// exact same total work (K sims) as one batched call. The scalar baseline is
+// f64, so this consumes the f64 batch.
+std::pair<Molecule, State> lane_system(const Batch<double>& b, std::size_t lane) {
   Molecule mol;
   State state;
   mol.atoms.reserve(b.n);
@@ -206,13 +228,90 @@ std::pair<Molecule, State> lane_system(const Batch& b, std::size_t lane) {
   return {std::move(mol), std::move(state)};
 }
 
+// One-time correctness gate: f32-batched must match f64-batched to ~f32
+// precision (consistent with 0004's accuracy story and 0003's 1.4e-14
+// f64-vs-scalar check). Both kernels run on one shared geometry — narrowed to
+// f32 for the float batch — so lanes [0, kd) carry identical inputs up to f32
+// rounding. Returns the measured max relative difference (reported so the 0005
+// writeup can cite it); aborts the binary if it exceeds tolerance.
+double verify_f32_matches_f64() {
+  const std::size_t n = 10;
+  const hn::ScalableTag<double> dd;
+  const hn::ScalableTag<float> df;
+  const std::size_t kd = hn::Lanes(dd);
+  const std::size_t kf = hn::Lanes(df);
+
+  Batch<double> bd = make_batch<double>(n, kd);
+  Batch<float> bf = make_batch<float>(n, kf);
+
+  // Overwrite both with one shared geometry so lanes [0, kd) are identical up
+  // to f32 rounding. The float batch's extra lanes [kd, kf) repeat lane 0 — the
+  // kernel is a pure lane-wise map, so they run harmlessly and are excluded
+  // from the compare below.
+  std::mt19937 rng(999);
+  std::uniform_real_distribution<double> pos(-1.0, 1.0);
+  for (std::size_t i = 0; i < n; ++i) {
+    for (std::size_t lane = 0; lane < kd; ++lane) {
+      const double x = pos(rng), y = pos(rng), z = pos(rng);
+      bd.px[i * kd + lane] = x;
+      bd.py[i * kd + lane] = y;
+      bd.pz[i * kd + lane] = z;
+      bf.px[i * kf + lane] = static_cast<float>(x);
+      bf.py[i * kf + lane] = static_cast<float>(y);
+      bf.pz[i * kf + lane] = static_cast<float>(z);
+    }
+    for (std::size_t lane = kd; lane < kf; ++lane) {
+      bf.px[i * kf + lane] = bf.px[i * kf];
+      bf.py[i * kf + lane] = bf.py[i * kf];
+      bf.pz[i * kf + lane] = bf.pz[i * kf];
+    }
+  }
+
+  accelerations_batched(bd);
+  accelerations_batched(bf);
+
+  double max_rel = 0.0;
+  for (std::size_t i = 0; i < n; ++i) {
+    for (std::size_t lane = 0; lane < kd; ++lane) {
+      const double rx = bd.ax[i * kd + lane];
+      const double ry = bd.ay[i * kd + lane];
+      const double rz = bd.az[i * kd + lane];
+      const double gx = bf.ax[i * kf + lane];
+      const double gy = bf.ay[i * kf + lane];
+      const double gz = bf.az[i * kf + lane];
+      // Relative to the acceleration vector magnitude, so a near-zero component
+      // (from cancellation) doesn't manufacture a spurious huge relative error.
+      const double mag = std::sqrt(rx * rx + ry * ry + rz * rz);
+      const double denom = std::max(mag, 1e-30);
+      max_rel = std::max(max_rel, std::abs(gx - rx) / denom);
+      max_rel = std::max(max_rel, std::abs(gy - ry) / denom);
+      max_rel = std::max(max_rel, std::abs(gz - rz) / denom);
+    }
+  }
+
+  // f32  epsilon is ~1.2e-7; with ~9 accumulated pair terms and some
+  // cancellation, a correct kernel lands well under 1e-4. A templating bug
+  // (wrong precision physics) would miss by orders of magnitude.
+  constexpr double kTol = 1e-4;
+  std::fprintf(stderr,
+               "[gate] f32-batched vs f64-batched max relative diff = %.3e "
+               "(N=%zu, kf=%zu, kd=%zu, tol=%.1e)\n",
+               max_rel, n, kf, kd, kTol);
+  if (!(max_rel < kTol)) {
+    std::fprintf(stderr, "[gate] FAILED: f32 batched kernel disagrees with f64 beyond tolerance\n");
+    std::abort();
+  }
+  return max_rel;
+}
+
 // Scalar baseline: K independent scalar force evaluations — the same total work
-// as one batched call, so wall-time ratio is the realized lane speedup.
+// as one batched call, so wall-time ratio is the realized lane speedup. Stays
+// f64 (the conservative reference); K is the f64 lane count.
 void BM_ForceScalarBatch(benchmark::State& bench) {
   const auto n = static_cast<std::size_t>(bench.range(0));
   const hn::ScalableTag<double> d;
   const std::size_t k = hn::Lanes(d);
-  Batch b = make_batch(n, k);
+  Batch<double> b = make_batch<double>(n, k);
 
   std::vector<Molecule> mols;
   std::vector<State> states;
@@ -236,11 +335,12 @@ void BM_ForceScalarBatch(benchmark::State& bench) {
   bench.counters["lanes"] = static_cast<double>(k);
 }
 
+template <class T>
 void BM_ForceBatched(benchmark::State& bench) {
   const auto n = static_cast<std::size_t>(bench.range(0));
-  const hn::ScalableTag<double> d;
+  const hn::ScalableTag<T> d;
   const std::size_t k = hn::Lanes(d);
-  Batch b = make_batch(n, k);
+  Batch<T> b = make_batch<T>(n, k);
 
   for (auto _ : bench) {
     accelerations_batched(b);
@@ -248,7 +348,8 @@ void BM_ForceBatched(benchmark::State& bench) {
     benchmark::ClobberMemory();
   }
   // K*N*N items per iteration, matching BM_ForceScalarBatch so the
-  // per-N throughput rows are directly comparable.
+  // per-N throughput rows are directly comparable. The lanes counter
+  // auto-reports 8 (f64) vs 16 (f32).
   bench.SetItemsProcessed(bench.iterations() * static_cast<int64_t>(k) * static_cast<int64_t>(n) *
                           static_cast<int64_t>(n));
   bench.counters["lanes"] = static_cast<double>(k);
@@ -256,11 +357,12 @@ void BM_ForceBatched(benchmark::State& bench) {
 
 // Port-bound diagnostic: see accelerations_batched_multonly. Non-physical;
 // reported only as the divide/sqrt-free floor of the batched kernel.
+template <class T>
 void BM_ForceBatchedNoDivSqrt(benchmark::State& bench) {
   const auto n = static_cast<std::size_t>(bench.range(0));
-  const hn::ScalableTag<double> d;
+  const hn::ScalableTag<T> d;
   const std::size_t k = hn::Lanes(d);
-  Batch b = make_batch(n, k);
+  Batch<T> b = make_batch<T>(n, k);
 
   for (auto _ : bench) {
     accelerations_batched_multonly(b);
@@ -274,9 +376,21 @@ void BM_ForceBatchedNoDivSqrt(benchmark::State& bench) {
 
 }  // namespace
 
-// Production molecule-size sweep: N = 2..10 atoms.
+// Production molecule-size sweep: N = 2..10 atoms. f64 and f32 batched kernels
+// are registered side by side so the 0005 f32/f64 ratio reads off one run.
 BENCHMARK(BM_ForceScalarBatch)->DenseRange(2, 10, 1);
-BENCHMARK(BM_ForceBatched)->DenseRange(2, 10, 1);
-BENCHMARK(BM_ForceBatchedNoDivSqrt)->DenseRange(2, 10, 1);
+BENCHMARK_TEMPLATE(BM_ForceBatched, double)->DenseRange(2, 10, 1);
+BENCHMARK_TEMPLATE(BM_ForceBatched, float)->DenseRange(2, 10, 1);
+BENCHMARK_TEMPLATE(BM_ForceBatchedNoDivSqrt, double)->DenseRange(2, 10, 1);
+BENCHMARK_TEMPLATE(BM_ForceBatchedNoDivSqrt, float)->DenseRange(2, 10, 1);
 
-BENCHMARK_MAIN();
+// Custom main (the expansion of BENCHMARK_MAIN) so the f32-vs-f64 correctness
+// gate runs once before any timing.
+int main(int argc, char** argv) {
+  verify_f32_matches_f64();
+  benchmark::Initialize(&argc, argv);
+  if (benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;
+  benchmark::RunSpecifiedBenchmarks();
+  benchmark::Shutdown();
+  return 0;
+}
