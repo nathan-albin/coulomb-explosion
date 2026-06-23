@@ -6,15 +6,15 @@ measurements back into initial molecular configurations.
 
 ## The physics model
 
-The simulator begins from a hypothetical state in which the atoms within a molecule are at rest and have been instantaneously ionized, with the $i\text{th}$ atom receiving a charge of $q_i$. The simulator assumes a purely Coulombic potential energy surface, resulting in the following ODE system of point charges:
+The simulator begins from a hypothetical state in which the atoms within a molecule are at rest and have been instantaneously ionized, with the $`i\text{th}`$ atom receiving a charge of $`q_i`$. The simulator assumes a purely Coulombic potential energy surface, resulting in the following ODE system of point charges:
 
 ```math
 m_i \frac{d^2 \mathbf{r}_i}{dt^2} = \sum_{j\neq i} \frac{q_i q_j}{|\mathbf{r}_i - \mathbf{r}_j|^3}(\mathbf{r}_i - \mathbf{r}_j).
 ```
 
-Here, $m_i$ is the mass of the $i\text{th}$ atom and $\mathbf{r}_i$ is its time-dependent position vector. The equations are written in atomic mass units so that the Coulomb constant is equal to 1.
+Here, $`m_i`$ is the mass of the $`i\text{th}`$ atom and $`\mathbf{r}_i`$ is its time-dependent position vector. The equations are written in atomic mass units so that the Coulomb constant is equal to 1.
 
-During the simulation, the ions will force each other apart, eventually settling into an asymptotic regime in which the time-dependent momentum vectors, $\mathbf{p}_i$ are very close to their limit $\lim\limits_{t\to\infty}\mathbf{p}_i(t)$.
+During the simulation, the ions will force each other apart, eventually settling into an asymptotic regime in which the time-dependent momentum vectors, $`\mathbf{p}_i`$ are very close to their limit $`\lim\limits_{t\to\infty}\mathbf{p}_i(t)`$.
 
 ## Overall goal
 
