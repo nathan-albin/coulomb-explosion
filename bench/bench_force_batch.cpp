@@ -39,6 +39,7 @@
 #include <random>
 #include <vector>
 
+#include "coulomb/batched_force.hpp"
 #include "coulomb/molecule.hpp"
 #include "coulomb/system.hpp"
 
@@ -99,63 +100,14 @@ Batch<T> make_batch(std::size_t n, std::size_t k, double coulomb_k = 1.0) {
   return b;
 }
 
-// Batched kernel: compute K acceleration fields at once, mirroring the scalar
-// CoulombForce::accelerations math lane-for-lane (1/sqrt, not rsqrt, so the
-// numerics match the scalar baseline rather than trading accuracy for speed).
+// Batched kernel: compute K acceleration fields at once. Thin wrapper over the
+// shared kernel (include/coulomb/batched_force.hpp) so the benchmark and the
+// batched integrator measure exactly the same code.
 template <class T>
 void accelerations_batched(const Batch<T>& b) {
-  const hn::ScalableTag<T> d;
-  const std::size_t n = b.n;
-  const std::size_t k = b.k;
-  const auto one = hn::Set(d, T(1));
-
-  for (std::size_t i = 0; i < n; ++i) {
-    hn::Store(hn::Zero(d), d, &b.ax[i * k]);
-    hn::Store(hn::Zero(d), d, &b.ay[i * k]);
-    hn::Store(hn::Zero(d), d, &b.az[i * k]);
-  }
-
-  for (std::size_t i = 0; i < n; ++i) {
-    const auto pxi = hn::Load(d, &b.px[i * k]);
-    const auto pyi = hn::Load(d, &b.py[i * k]);
-    const auto pzi = hn::Load(d, &b.pz[i * k]);
-    auto axi = hn::Load(d, &b.ax[i * k]);
-    auto ayi = hn::Load(d, &b.ay[i * k]);
-    auto azi = hn::Load(d, &b.az[i * k]);
-
-    for (std::size_t j = i + 1; j < n; ++j) {
-      const auto rx = hn::Sub(pxi, hn::Load(d, &b.px[j * k]));
-      const auto ry = hn::Sub(pyi, hn::Load(d, &b.py[j * k]));
-      const auto rz = hn::Sub(pzi, hn::Load(d, &b.pz[j * k]));
-
-      const auto dist2 = hn::MulAdd(rx, rx, hn::MulAdd(ry, ry, hn::Mul(rz, rz)));
-      const auto inv_dist = hn::Div(one, hn::Sqrt(dist2));
-      const auto inv_dist3 = hn::Div(inv_dist, dist2);
-      const auto scale = hn::Mul(hn::Set(d, b.pair_const[i * n + j]), inv_dist3);
-
-      const auto fx = hn::Mul(rx, scale);
-      const auto fy = hn::Mul(ry, scale);
-      const auto fz = hn::Mul(rz, scale);
-
-      axi = hn::Add(axi, fx);
-      ayi = hn::Add(ayi, fy);
-      azi = hn::Add(azi, fz);
-      hn::Store(hn::Sub(hn::Load(d, &b.ax[j * k]), fx), d, &b.ax[j * k]);
-      hn::Store(hn::Sub(hn::Load(d, &b.ay[j * k]), fy), d, &b.ay[j * k]);
-      hn::Store(hn::Sub(hn::Load(d, &b.az[j * k]), fz), d, &b.az[j * k]);
-    }
-
-    hn::Store(axi, d, &b.ax[i * k]);
-    hn::Store(ayi, d, &b.ay[i * k]);
-    hn::Store(azi, d, &b.az[i * k]);
-  }
-
-  for (std::size_t i = 0; i < n; ++i) {
-    const auto m = hn::Set(d, b.inv_mass[i]);
-    hn::Store(hn::Mul(hn::Load(d, &b.ax[i * k]), m), d, &b.ax[i * k]);
-    hn::Store(hn::Mul(hn::Load(d, &b.ay[i * k]), m), d, &b.ay[i * k]);
-    hn::Store(hn::Mul(hn::Load(d, &b.az[i * k]), m), d, &b.az[i * k]);
-  }
+  coulomb::batched::accelerations<T>(b.n, b.k, b.px.get(), b.py.get(), b.pz.get(),
+                                     b.pair_const.data(), b.inv_mass.data(), b.ax.get(), b.ay.get(),
+                                     b.az.get());
 }
 
 // Port-bound diagnostic (NOT a real kernel — the physics is deliberately

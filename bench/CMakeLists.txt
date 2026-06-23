@@ -37,6 +37,15 @@ target_link_libraries(coulomb_force_batch
   PRIVATE coulomb::engine coulomb_flags benchmark::benchmark hwy)
 target_compile_options(coulomb_force_batch PRIVATE -march=native)
 
+# Batched shared-dt lockstep RK45 integrator (0006). Same -march=native /
+# static-dispatch Highway regime as the force-batch kernel; links the generic
+# engine for the scalar per-lane oracle and the sampler.
+add_executable(coulomb_batched_integrator bench_batched_integrator.cpp)
+
+target_link_libraries(coulomb_batched_integrator
+  PRIVATE coulomb::engine coulomb_flags hwy)
+target_compile_options(coulomb_batched_integrator PRIVATE -march=native)
+
 # Step-count dispersion study for the SIMD-over-lanes decision. A plain driver
 # (not a Google Benchmark microbenchmark): it samples many geometries, runs each
 # explosion to convergence, and reports the step-count spread plus the shared-dt
