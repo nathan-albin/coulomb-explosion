@@ -19,7 +19,7 @@ During the simulation, the ions will force each other apart, eventually settling
 ## Overall goal
 
 The overall goal is to make the simulation code high performance in order to perform millions of simulations efficiently. The engine is built to be vectorized and
-cache-aware, with correctness and a scalar baseline established first, then measured, documented optimization.
+cache-aware, with correctness and a scalar baseline established first, then measured, documented optimization. A secondary goal is to gain experience guiding Claude Code. I'm using Claude to write the code, reports, and other documentation.
 
 > Status: **working vectorized engine; data-output layer still to come.** In
 > place: the scalar O(N²) Coulomb baseline, symplectic velocity-Verlet and
