@@ -1,0 +1,8 @@
+# N=10 pool=8192 reps=15 realized_vs_scalar=34.0349 realized_vs_batched=11.973
+row,precision,lanes,rtol,pe_stop,sims_per_sec,cv,efficiency,mean_batch_steps
+scalar_default,f64,1,1e-08,1e-09,3209.15,0.010087,0,126.783
+scalar_prod,f64,1,0.0001,1e-05,15811,0.035023,0,25.5122
+batched_default,f64,4,1e-08,1e-09,9122.47,0.0237772,0.80975,156.57
+batched_prod,f64,4,0.0001,1e-05,50176.3,0.0624145,0.875002,29.1567
+batched_default,f32,8,1e-08,1e-09,7273.4,0.124577,0.306515,413.627
+batched_prod,f32,8,0.0001,1e-05,109223,0.116893,0.810263,31.4863

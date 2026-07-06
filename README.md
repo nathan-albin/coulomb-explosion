@@ -26,7 +26,8 @@ cache-aware, with correctness and a scalar baseline established first, then meas
 > adaptive RK45 (DP5(4)) integrators, a uniform-sphere sampler, and
 > convergence-driven explosion runs. The SIMD-over-lanes path is built and
 > measured — a batched force kernel and a batched lockstep integrator realize
-> ~27× over the f64 scalar baseline at single precision (see
+> ~27–34× over the f64 scalar baseline at single precision, depending on the
+> build host's SIMD width (AVX-512 vs. AVX2 — see
 > [docs/benchmarks/](docs/benchmarks/) and [docs/decisions/](docs/decisions/)).
 > Still planned: Parquet dataset output and further integrator optimizations
 > (difficulty binning, refill/wavefront, rsqrt). See [docs/](docs/).

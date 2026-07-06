@@ -28,9 +28,12 @@ target_link_libraries(coulomb_bench
   PRIVATE coulomb::engine coulomb_flags benchmark::benchmark)
 
 # SIMD-over-lanes batched force kernel (the production lever). Built with
-# -march=native so Highway compiles for the host's widest ISA (AVX-512 -> K=8
-# doubles on this Tiger Lake target); the rest of the project stays generic so
-# 0001's scalar floor remains the conservative SSE2 baseline.
+# -march=native so Highway compiles for the host's widest ISA (e.g. AVX-512 ->
+# K=8 doubles on the Tiger Lake host in docs/benchmarks/0005-0006, or AVX2 ->
+# K=4 doubles on the AVX2 host in 0007 -- lane count is a build-host property,
+# re-measure with 0007's method on a new architecture rather than assuming);
+# the rest of the project stays generic so 0001's scalar floor remains the
+# conservative SSE2 baseline.
 add_executable(coulomb_force_batch bench_force_batch.cpp)
 
 target_link_libraries(coulomb_force_batch
