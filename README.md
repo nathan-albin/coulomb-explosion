@@ -21,16 +21,21 @@ During the simulation, the ions will force each other apart, eventually settling
 The overall goal is to make the simulation code high performance in order to perform millions of simulations efficiently. The engine is built to be vectorized and
 cache-aware, with correctness and a scalar baseline established first, then measured, documented optimization. A secondary goal is to gain experience guiding Claude Code. I'm using Claude to write the code, reports, and other documentation.
 
-> Status: **working vectorized engine; data-output layer still to come.** In
-> place: the scalar O(N²) Coulomb baseline, symplectic velocity-Verlet and
+> Status: **working vectorized engine; real dataset generation demonstrated.**
+> In place: the scalar O(N²) Coulomb baseline, symplectic velocity-Verlet and
 > adaptive RK45 (DP5(4)) integrators, a uniform-sphere sampler, and
 > convergence-driven explosion runs. The SIMD-over-lanes path is built and
 > measured — a batched force kernel and a batched lockstep integrator realize
 > ~27–34× over the f64 scalar baseline at single precision, depending on the
 > build host's SIMD width (AVX-512 vs. AVX2 — see
 > [docs/benchmarks/](docs/benchmarks/) and [docs/decisions/](docs/decisions/)).
-> Still planned: Parquet dataset output and further integrator optimizations
-> (difficulty binning, refill/wavefront, rsqrt). See [docs/](docs/).
+> [examples/](examples/) generates a real 10M-simulation CH4 dataset end to
+> end (10M sims in 39s on one AVX2 core), converts it to Parquet, and verifies
+> a subset against the original fp64 oracle (docs/benchmarks/0008). Parquet
+> output is still example-level, not yet a first-class engine feature. Still
+> planned: promoting dataset output into the engine proper, and further
+> integrator optimizations (difficulty binning, refill/wavefront, rsqrt). See
+> [docs/](docs/).
 
 ## Building
 

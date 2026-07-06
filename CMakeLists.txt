@@ -27,6 +27,7 @@ endif()
 # ----------------------------------------------------------------------------
 option(COULOMB_BUILD_TESTS      "Build unit / correctness tests"  ON)
 option(COULOMB_BUILD_BENCHMARKS "Build microbenchmarks"           OFF)
+option(COULOMB_BUILD_EXAMPLES   "Build example data-generation drivers" OFF)
 option(COULOMB_ENABLE_WARNINGS  "Enable a strict warning set"     ON)
 option(COULOMB_ENABLE_SANITIZERS "Build with ASan + UBSan"        OFF)
 option(COULOMB_SINGLE_PRECISION "Build the engine in float (Real=float)" OFF)
@@ -72,4 +73,8 @@ endif()
 
 if(COULOMB_BUILD_BENCHMARKS)
   add_subdirectory(bench)
+endif()
+
+if(COULOMB_BUILD_EXAMPLES)
+  add_subdirectory(examples)
 endif()
