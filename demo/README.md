@@ -5,7 +5,8 @@ produces a figure. Distinct from `examples/` (production-scale, multi-GB, needs
 a scratch mount) — this is the "point at it and explain it" demo.
 
 ```sh
-demo/run_demo.sh          # 1,000,000 CH4 explosions (~3 s + build + plot)
+demo/run_demo.sh          # 1,000,000 CH4 explosions; sim itself is ~3 s,
+                          # building the engine and the plotting venv add more
 demo/run_demo.sh 100000   # smaller/faster
 ```
 
@@ -56,6 +57,10 @@ Everything lands in `build/demo-scratch/` (raw dataset, gitignored) and
 ```sh
 python examples/verify_subset.py --bin build/demo-scratch/ch4.bin --n 500
 ```
+
+This needs its own environment (`examples/requirements.txt`: scipy, numba,
+pyarrow) — `demo/.venv`, set up by `run_demo.sh` for plotting, only has numpy
+and matplotlib and won't satisfy it.
 
 The generator, record layout, and Parquet conversion are documented in
 [examples/README.md](../examples/README.md) and

@@ -45,3 +45,5 @@ echo
 echo "Done. Open $OUT_PNG"
 echo "Optional: validate the fast f32 dataset against the fp64 oracle with"
 echo "  python examples/verify_subset.py --bin $BIN --n 500"
+echo "(needs its own environment per examples/requirements.txt -- scipy,"
+echo "numba, pyarrow -- which demo/.venv above does not install)"

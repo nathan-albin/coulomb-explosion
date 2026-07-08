@@ -22,7 +22,9 @@ To build the SIMD engine, simulate one million CH4 (methane) explosions
 from geometries sampled uniformly inside a sphere, and generate the figure above:
 
 ```sh
-demo/run_demo.sh          # ~15 s total on a laptop (build + 1M sims + plot)
+demo/run_demo.sh          # the sim itself is ~3 s; building the engine and
+                          # setting up the Python venv add more, especially
+                          # on a first run
 ```
 
 > [!NOTE]
